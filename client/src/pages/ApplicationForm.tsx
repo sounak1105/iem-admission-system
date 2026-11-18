@@ -25,8 +25,11 @@ export default function ApplicationForm() {
 
   const course = courses.find((c) => c.name === form.course);
   const marksNum = Number(form.marks);
-  const marksEntered = form.marks !== '' && Number.isFinite(marksNum);
-  const eligible = !!course && marksEntered && marksNum >= course.minPercent;
+  const marksEntered = form.marks.trim() !== '';
+  // Marks are a percentage: only 0 to 100 is valid (the server enforces the same rule)
+  const marksValid = marksEntered && Number.isFinite(marksNum) && marksNum >= 0 && marksNum <= 100;
+  const marksError = marksEntered && !marksValid ? 'Enter marks between 0 and 100' : '';
+  const eligible = !!course && marksValid && marksNum >= course.minPercent;
 
   async function run<T>(fn: () => Promise<T>): Promise<T | undefined> {
     setBusy(true); setError('');
@@ -88,11 +91,13 @@ export default function ApplicationForm() {
             <input required value={form.qualification} className={inputCls}
               onChange={(e) => setForm({ ...form, qualification: e.target.value })} />
           </Field>
-          <Field label="Marks (%)">
-            <input required type="number" min={0} max={100} step="0.01" value={form.marks} className={inputCls}
+          <Field label="Marks (%)" error={marksError}>
+            <input required type="number" min={0} max={100} step="0.01" value={form.marks}
+              aria-invalid={!!marksError}
+              className={`${inputCls} ${marksError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               onChange={(e) => setForm({ ...form, marks: e.target.value })} />
           </Field>
-          {course && marksEntered && (
+          {course && marksValid && (
             eligible
               ? <Alert kind="success">Eligible for {course.name} (minimum {course.minPercent}%).</Alert>
               : <Alert kind="error">Not eligible: {course.name} requires at least {course.minPercent}%.</Alert>
